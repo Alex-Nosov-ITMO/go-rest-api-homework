@@ -56,7 +56,10 @@ func getAllTasks(res http.ResponseWriter, req *http.Request) {
 	// так как все успешно, то статус OK
 	res.WriteHeader(http.StatusOK)
 
-	res.Write(resp)
+	_, err = res.Write(resp)
+	if err != nil {
+		fmt.Printf("Ошибка при выводе задач: %s", err)
+	}
 }
 
 // обработчик для вывода задачи по индексу id при запросе GET /tasks/{id}
@@ -74,7 +77,7 @@ func getTask(res http.ResponseWriter, req *http.Request) {
 	// переводим структуру в слайс байт
 	resp, err := json.Marshal(task)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -85,6 +88,9 @@ func getTask(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 
 	res.Write(resp)
+	if err != nil {
+		fmt.Printf("Ошибка при выводе задачи: %s", err)
+	}
 }
 
 // обработчик для добавления структуры в мапу при запросе POST /tasks
@@ -96,7 +102,7 @@ func postTask(res http.ResponseWriter, req *http.Request) {
 	// считываем тело запроса
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -104,6 +110,13 @@ func postTask(res http.ResponseWriter, req *http.Request) {
 	err = json.Unmarshal(buf.Bytes(), &task)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// проверяем наличие данного id в мапе
+	_, ok := tasks[task.ID]
+	if ok {
+		http.Error(res, "Задача с таким ID уже присутствует в мапе", http.StatusBadRequest)
 		return
 	}
 
